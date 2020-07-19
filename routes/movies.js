@@ -8,6 +8,11 @@ const {
 } = require('../utils/schema/movies');
 
 const validetionHandler = require('../utils/middleware/validateHandler');
+const cacheResponse = require('../utils/cacheResponse');
+const {
+  FIVE_MINUTES_IN_SECONDS,
+  SIXTY_MINUTES_IN_SECONDS,
+} = require('../utils/time');
 
 //Se crea una funcion que reciba como parametro una aplicacion de express lo que permite es ser dinamicos y tener control sobre que aplicacion va a consumir nuestra ruta
 function moviesApi(app) {
@@ -19,6 +24,7 @@ function moviesApi(app) {
 
   const moviesService = new MoviesService(); //creamos una nueva instancia de nuestro modulo de servicios
   router.get('/', async function (req, res, next) {
+    cacheResponse(res, FIVE_MINUTES_IN_SECONDS);
     const { tags } = req.query;
     /* cuando se le haga una peticion get osea de lectura a la ruta de "/" que seria nuestro home que esta definido en la linea 9 como es una peticion se tiene que utilizar codigo asincrono, entonces para eso utilizamos async function. Una ruta siempre va a recibir una request, una response y en este caso la funcionalidad next */
     /* Como es codigo asincrono tenemos que utilizar el try catch */
@@ -40,6 +46,7 @@ function moviesApi(app) {
     '/:movieId',
     validetionHandler({ movieId: movieIdSchema }, 'params'),
     async function (req, res, next) {
+      cacheResponse(res, SIXTY_MINUTES_IN_SECONDS);
       const { movieId } = req.params;
       try {
         const movies = await moviesService.getMovie({ movieId }); //Como estamos utilizando mocks solo es necesario pasar una pelicula de momento
