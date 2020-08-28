@@ -2,6 +2,7 @@ const express = require('express');
 const { config } = require('./config/index');
 const moviesApi = require('./routes/movies.js'); // Exportamos nuestro archivo de rutas
 const userMoviesApi = require('./routes/userMovies')
+const authApi = require('./routes/auth')
 
 const app = express();
 // exportamos los middlewares de errores
@@ -16,6 +17,7 @@ const notFoundHandler = require('./utils/middleware/notFoundHandler');
 app.use(express.json()); // con este middleware permite a nuestras rutas que cuando lleven datos formato json sepa como interpretarlos
 
 //Y ejecutamos nuestra funcion de las rutas pasandole nuestra app de express
+authApi(app);
 moviesApi(app);
 userMoviesApi(app);
 
