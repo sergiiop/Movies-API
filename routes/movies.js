@@ -12,6 +12,8 @@ const {
 require('../utils/auth/strategies/jwt')
 
 const validetionHandler = require('../utils/middleware/validateHandler');
+const scopesValidationHandler = require('../utils/middleware/scopesValidationHandler');
+
 const cacheResponse = require('../utils/cacheResponse');
 const {
   FIVE_MINUTES_IN_SECONDS,
@@ -27,28 +29,31 @@ function moviesApi(app) {
   /* Apartir de aqui se alimanta al router con las demas rutas */
 
   const moviesService = new MoviesService(); //creamos una nueva instancia de nuestro modulo de servicios
-  router.get('/', passport.authenticate('jwt', { session: false }), async function (req, res, next) {
-    cacheResponse(res, FIVE_MINUTES_IN_SECONDS);
-    const { tags } = req.query;
-    /* cuando se le haga una peticion get osea de lectura a la ruta de "/" que seria nuestro home que esta definido en la linea 9 como es una peticion se tiene que utilizar codigo asincrono, entonces para eso utilizamos async function. Una ruta siempre va a recibir una request, una response y en este caso la funcionalidad next */
-    /* Como es codigo asincrono tenemos que utilizar el try catch */
-    try {
-      /* Recibimos las peliculas haciendo un await de nuestra clase de servicios con el metodo de que hace referencia a todas las peliculas */
-      const movies = await moviesService.getMovies({ tags });
-      /* Utilizamos el response y definimos el status 200 que significa que todo salio bien y tambien definimos que la respuesta json la data: siendo todas las peliculas y dejamos un mensaje para que el cliente sepa lo que paso, en este caso estamos listando todas las peliculas */
-      res.status(200).json({
-        data: movies,
-        message: 'movies listed',
-      });
-    } catch (error) {
-      next(error);
-      /* express hace el manejo de errores con la funcionalidad next pasandole el error */
-    }
-  });
+  router.get('/', passport.authenticate('jwt', { session: false }),
+    scopesValidationHandler(['read:movies']),
+    async function (req, res, next) {
+      cacheResponse(res, FIVE_MINUTES_IN_SECONDS);
+      const { tags } = req.query;
+      /* cuando se le haga una peticion get osea de lectura a la ruta de "/" que seria nuestro home que esta definido en la linea 9 como es una peticion se tiene que utilizar codigo asincrono, entonces para eso utilizamos async function. Una ruta siempre va a recibir una request, una response y en este caso la funcionalidad next */
+      /* Como es codigo asincrono tenemos que utilizar el try catch */
+      try {
+        /* Recibimos las peliculas haciendo un await de nuestra clase de servicios con el metodo de que hace referencia a todas las peliculas */
+        const movies = await moviesService.getMovies({ tags });
+        /* Utilizamos el response y definimos el status 200 que significa que todo salio bien y tambien definimos que la respuesta json la data: siendo todas las peliculas y dejamos un mensaje para que el cliente sepa lo que paso, en este caso estamos listando todas las peliculas */
+        res.status(200).json({
+          data: movies,
+          message: 'movies listed',
+        });
+      } catch (error) {
+        next(error);
+        /* express hace el manejo de errores con la funcionalidad next pasandole el error */
+      }
+    });
   /* Para solicitar solamente una pelicula pasamos como url el id de la pelicula que queremos */
   router.get(
     '/:movieId',
     passport.authenticate('jwt', { session: false }),
+    scopesValidationHandler(['read:movies']),
     validetionHandler({ movieId: movieIdSchema }, 'params'),
     async function (req, res, next) {
       cacheResponse(res, SIXTY_MINUTES_IN_SECONDS);
@@ -65,11 +70,13 @@ function moviesApi(app) {
     }
   );
   /* Para hacer la creacion de peliculas se utiliza el metodo POST y en este caso solo recibe la pelicula que es creada */
-  router.post('/', passport.authenticate('jwt', { session: false }), validetionHandler(createMovieSchema), async function (
-    req,
-    res,
-    next
-  ) {
+  router.post('/', passport.authenticate('jwt', { session: false }),
+    scopesValidationHandler(['create:movies']),
+    validetionHandler(createMovieSchema), async function (
+      req,
+      res,
+      next
+    ) {
     const { body: movie } = req;
     try {
       const createdMovieId = await moviesService.createMovie({ movie }); //de esta forma devolvemos el id de la primera pelicula del mock
@@ -85,6 +92,7 @@ function moviesApi(app) {
   router.put(
     '/:movieId',
     passport.authenticate('jwt', { session: false }),
+    scopesValidationHandler(['update:movies']),
     validetionHandler({ movieId: movieIdSchema }, 'params'),
     validetionHandler(updateMovieSchema),
     async function (req, res, next) {
@@ -123,6 +131,7 @@ function moviesApi(app) {
   router.delete(
     '/:movieId',
     passport.authenticate('jwt', { session: false }),
+    scopesValidationHandler(['deleted:movies']),
     validetionHandler({ movieId: movieIdSchema }, 'params'),
     async function (req, res, next) {
       const { movieId } = req.params;
