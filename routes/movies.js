@@ -1,4 +1,5 @@
 const express = require('express'); // requerimos la libria express
+const passport = require('passport')
 const MoviesService = require('../services/movies'); //requerimos nuestro modulo de servicios
 
 const {
@@ -6,6 +7,9 @@ const {
   createMovieSchema,
   updateMovieSchema,
 } = require('../utils/schema/movies');
+
+//JWT strategy
+require('../utils/auth/strategies/jwt')
 
 const validetionHandler = require('../utils/middleware/validateHandler');
 const cacheResponse = require('../utils/cacheResponse');
@@ -23,7 +27,7 @@ function moviesApi(app) {
   /* Apartir de aqui se alimanta al router con las demas rutas */
 
   const moviesService = new MoviesService(); //creamos una nueva instancia de nuestro modulo de servicios
-  router.get('/', async function (req, res, next) {
+  router.get('/', passport.authenticate('jwt', { session: false }), async function (req, res, next) {
     cacheResponse(res, FIVE_MINUTES_IN_SECONDS);
     const { tags } = req.query;
     /* cuando se le haga una peticion get osea de lectura a la ruta de "/" que seria nuestro home que esta definido en la linea 9 como es una peticion se tiene que utilizar codigo asincrono, entonces para eso utilizamos async function. Una ruta siempre va a recibir una request, una response y en este caso la funcionalidad next */
@@ -44,6 +48,7 @@ function moviesApi(app) {
   /* Para solicitar solamente una pelicula pasamos como url el id de la pelicula que queremos */
   router.get(
     '/:movieId',
+    passport.authenticate('jwt', { session: false }),
     validetionHandler({ movieId: movieIdSchema }, 'params'),
     async function (req, res, next) {
       cacheResponse(res, SIXTY_MINUTES_IN_SECONDS);
@@ -60,7 +65,7 @@ function moviesApi(app) {
     }
   );
   /* Para hacer la creacion de peliculas se utiliza el metodo POST y en este caso solo recibe la pelicula que es creada */
-  router.post('/', validetionHandler(createMovieSchema), async function (
+  router.post('/', passport.authenticate('jwt', { session: false }), validetionHandler(createMovieSchema), async function (
     req,
     res,
     next
@@ -79,6 +84,7 @@ function moviesApi(app) {
   /* Para la actualizacion utilizamos el metodo put y como necesitamos saber que pelicula va a actualizar se tiene que recibir el id de la pelicula*/
   router.put(
     '/:movieId',
+    passport.authenticate('jwt', { session: false }),
     validetionHandler({ movieId: movieIdSchema }, 'params'),
     validetionHandler(updateMovieSchema),
     async function (req, res, next) {
@@ -98,7 +104,7 @@ function moviesApi(app) {
       }
     }
   );
-  router.patch('/:movieId', async function (req, res, next) {
+  router.patch('/:movieId', passport.authenticate('jwt', { session: false }), async function (req, res, next) {
     const { movieId } = req.params;
     const { body: movie } = req.params;
     try {
@@ -116,6 +122,7 @@ function moviesApi(app) {
   });
   router.delete(
     '/:movieId',
+    passport.authenticate('jwt', { session: false }),
     validetionHandler({ movieId: movieIdSchema }, 'params'),
     async function (req, res, next) {
       const { movieId } = req.params;
